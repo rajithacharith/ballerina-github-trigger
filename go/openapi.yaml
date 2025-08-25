@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: GitHub Webhook Handler API
+  description: A Go service that receives and processes GitHub webhook events
+  version: 1.0.0
+  contact:
+    name: GitHub Webhook Handler
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /webhook:
+    post:
+      summary: Receive GitHub webhook events
+      description: Endpoint to receive and process GitHub webhook events with signature validation
+      operationId: handleWebhook
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          description: GitHub webhook signature for payload validation
+          schema:
+            type: string
+            example: "sha256=1234567890abcdef..."
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          description: GitHub event type
+          schema:
+            type: string
+            enum: [push, pull_request, issues]
+            example: "push"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubWebhookPayload'
+            examples:
+              push_event:
+                summary: Push event payload
+                value:
+                  action: "pushed"
+                  repository:
+                    name: "example-repo"
+                    full_name: "user/example-repo"
+                  sender:
+                    login: "username"
+              pull_request_event:
+                summary: Pull request event payload
+                value:
+                  action: "opened"
+                  repository:
+                    name: "example-repo"
+                    full_name: "user/example-repo"
+                  sender:
+                    login: "username"
+              issues_event:
+                summary: Issues event payload
+                value:
+                  action: "opened"
+                  repository:
+                    name: "example-repo"
+                    full_name: "user/example-repo"
+                  sender:
+                    login: "username"
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Webhook received successfully"
+        '400':
+          description: Bad request - Invalid JSON payload or missing event type header
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Invalid JSON payload"
+        '401':
+          description: Unauthorized - Missing or invalid signature
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Invalid signature"
+        '405':
+          description: Method not allowed - Only POST requests are accepted
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Method not allowed"
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Failed to read request body"
+      security:
+        - GitHubWebhookSignature: []
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "OK"
+
+components:
+  schemas:
+    GitHubWebhookPayload:
+      type: object
+      description: GitHub webhook payload structure
+      properties:
+        action:
+          type: string
+          description: The action that was performed
+          example: "opened"
+        repository:
+          type: object
+          description: Repository information
+          additionalProperties: true
+          properties:
+            name:
+              type: string
+              example: "example-repo"
+            full_name:
+              type: string
+              example: "user/example-repo"
+        sender:
+          type: object
+          description: User who triggered the event
+          additionalProperties: true
+          properties:
+            login:
+              type: string
+              example: "username"
+
+  securitySchemes:
+    GitHubWebhookSignature:
+      type: apiKey
+      in: header
+      name: X-Hub-Signature-256
+      description: GitHub webhook signature for payload validation
+
+tags:
+  - name: webhook
+    description: GitHub webhook operations
+  - name: health
+    description: Health check operations
