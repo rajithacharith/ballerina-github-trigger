@@ -3,7 +3,7 @@ import ballerina/log;
 
 public configurable string webhookSecret = ?;
 
-listener github:Listener github = new (listenerConfig = {webhookSecret: webhookSecret}, listenOn = 8000);
+listener github:Listener github = new (listenerConfig = {webhookSecret: webhookSecret}, listenOn = 8080);
 
 service github:PullRequestService on github {
     remote function onOpened(github:PullRequestEvent payload) returns error|() {
